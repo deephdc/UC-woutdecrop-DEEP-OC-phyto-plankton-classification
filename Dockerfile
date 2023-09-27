@@ -18,6 +18,9 @@ ARG branch=master
 # Install ubuntu updates and python related stuff
 # link python3 to python, pip3 to pip, if needed
 ENV DEBIAN_FRONTEND=noninteractive
+
+RUN rm /etc/apt/sources.list.d/cuda.list
+RUN rm /etc/apt/sources.list.d/nvidia-ml.list
 # Install required packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

@@ -2,7 +2,7 @@
 # tag - tag for the Base image, (e.g. 1.10.0-py3 for tensorflow)
 # branch - user repository branch to clone (default: master, other option: test)
 
-ARG tag=2.3.3
+ARG tag=1.14.0-py3
 
 # Base image, e.g. tensorflow/tensorflow:1.12.0-py3
 FROM tensorflow/tensorflow:${tag}
@@ -39,17 +39,12 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /root/.cache/pip/* \
+    && rm -rf /tmp/*e/pip/* \
     && rm -rf /tmp/*
 
 # Install OpenCV-Python (replace version with the one you want)
 RUN pip3 install --upgrade pip setuptools wheel \
     && pip3 install opencv-python==3.4.17.61
-
-
-# # Needed for open-cv
-# RUN apt-get update && \
-#     apt-get install -y libgl1 libsm6 libxrender1 libfontconfig1 && \
-#     apt-get install -y python3-opencv
 
 
 # Set LANG environment
@@ -70,9 +65,7 @@ RUN wget https://downloads.rclone.org/rclone-current-linux-amd64.deb && \
     rm -rf /tmp/*
 
 # Install deep-start script
-# * allows to run shorter command "deep-start"
-# * allows to install jupyterlab or code-server (vscode),
-#   if requested during container creation
+
 RUN git clone https://github.com/deephdc/deep-start /srv/.deep-start && \
     ln -s /srv/.deep-start/deep-start.sh /usr/local/bin/deep-start
 
@@ -81,16 +74,19 @@ RUN pip install --no-cache-dir flaat && \
     rm -rf /root/.cache/pip/* && \
     rm -rf /tmp/*
 
+
+
+
 # Disable FLAAT authentication by default
 ENV DISABLE_AUTHENTICATION_AND_ASSUME_AUTHENTICATED_USER yes
 
-# Install DEEPaaS from PyPi:
-RUN pip install --no-cache-dir deepaas && \
+# Useful tool to debug extensions loading
+RUN pip install --no-cache-dir entry_point_inspector && \
     rm -rf /root/.cache/pip/* && \
     rm -rf /tmp/*
 
-# Useful tool to debug extensions loading
-RUN pip install --no-cache-dir entry_point_inspector && \
+# Install DEEPaaS from PyPi:
+RUN pip install --no-cache-dir deepaas && \
     rm -rf /root/.cache/pip/* && \
     rm -rf /tmp/*
 
@@ -105,16 +101,17 @@ RUN git clone -b $branch --depth 1 https://github.com/lifewatch/phyto-plankton-c
     rm -rf /tmp/* && \
     cd ..
 
-# Download network weights
-ENV SWIFT_CONTAINER https://api.cloud.ifca.es:8080/swift/v1/phytoplankton-tf/
-ENV MODEL_TAR phytoplankton.tar.xz
 
-RUN curl --insecure -o ./phyto-plankton-classification/models/${MODEL_TAR} \
-    ${SWIFT_CONTAINER}${MODEL_TAR}
-
-RUN cd phyto-plankton-classification/models && \
-    tar -xf ${MODEL_TAR} &&\
+ENV SWIFT_CONTAINER=https://share.services.ai4os.eu/index.php/s/rJQPQtBReqHAPf3/download
+ENV MODEL_TAR=phytoplankton_vliz.tar.gz
+# mkdir -p ./phyto-plankton-classification/models \
+# Download and extract the file
+RUN curl -L ${SWIFT_CONTAINER} -o ./phyto-plankton-classification/models/${MODEL_TAR} 
+RUN cd ./phyto-plankton-classification/models && \
+    tar -xzf ${MODEL_TAR} && \
     rm ${MODEL_TAR}
+
+
 
 # Open DEEPaaS port
 EXPOSE 5000
